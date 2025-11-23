@@ -7,6 +7,7 @@ A Chrome extension that displays country flag emojis next to Twitter/X usernames
 - Automatically detects usernames on Twitter/X pages
 - Queries Twitter's GraphQL API to get account location information
 - Displays the corresponding country flag emoji next to usernames
+- Hide posts/accounts originating from countries you select in the popup
 - Works with dynamically loaded content (infinite scroll)
 - Caches location data to minimize API calls
 
@@ -42,6 +43,14 @@ The extension uses a page script injection approach to make API requests. This a
 - Work seamlessly with Twitter's authentication system
 
 The content script injects a script into the page context that listens for location fetch requests. When a username is detected, the content script sends a custom event to the page script, which makes the API request and returns the location data.
+
+## Hiding posts from specific countries
+
+Use the extension popup to manage the list of countries you want to hide:
+1. Open the popup from the toolbar and scroll to **Hidden countries**
+2. Type a country name (case-insensitive) and press **Add**. Suggestions are provided for the built-in country list.
+3. Tweets and user cells whose profile location matches any selected country will be hidden once the location is fetched.
+4. Use **Clear** to remove all filters or the x on a chip to remove a single country. Removing a country will unhide previously hidden posts.
 
 ## API Endpoint
 

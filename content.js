@@ -3,6 +3,10 @@ let locationCache = new Map();
 const CACHE_KEY = 'twitter_location_cache';
 const CACHE_EXPIRY_DAYS = 30; // Cache for 30 days
 
+// Hidden countries preferences
+const HIDDEN_COUNTRIES_KEY = 'hidden_countries';
+let hiddenCountries = new Set();
+
 // Rate limiting
 const requestQueue = [];
 let isProcessingQueue = false;
@@ -35,6 +39,23 @@ async function loadEnabledState() {
   }
 }
 
+// Load hidden countries list
+async function loadHiddenCountries() {
+  try {
+    const result = await chrome.storage.local.get([HIDDEN_COUNTRIES_KEY]);
+    const saved = result[HIDDEN_COUNTRIES_KEY];
+    if (Array.isArray(saved)) {
+      setHiddenCountries(saved);
+      console.log('Loaded hidden countries:', Array.from(hiddenCountries));
+    } else {
+      setHiddenCountries([]);
+    }
+  } catch (error) {
+    console.error('Error loading hidden countries:', error);
+    setHiddenCountries([]);
+  }
+}
+
 // Listen for toggle changes from popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.type === 'extensionToggle') {
@@ -49,7 +70,19 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     } else {
       // Remove all flags if disabled
       removeAllFlags();
+      showAllHiddenContent();
     }
+  } else if (request.type === 'updateHiddenCountries') {
+    console.log('Received hidden countries update from popup');
+    setHiddenCountries(request.countries || []);
+  }
+});
+
+// React to storage updates (e.g., when popup changes hidden countries)
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === 'local' && changes[HIDDEN_COUNTRIES_KEY]) {
+    const newValue = changes[HIDDEN_COUNTRIES_KEY].newValue;
+    setHiddenCountries(Array.isArray(newValue) ? newValue : []);
   }
 });
 
@@ -134,6 +167,82 @@ async function saveCacheEntry(username, location) {
       await saveCache();
       saveCache.timeout = null;
     }, 5000);
+  }
+}
+
+// Hidden countries helpers
+function setHiddenCountries(countries) {
+  if (!Array.isArray(countries)) {
+    countries = [];
+  }
+  
+  hiddenCountries = new Set(
+    countries
+      .filter(country => typeof country === 'string' && country.trim().length > 0)
+      .map(country => country.toLowerCase())
+  );
+  
+  refreshHiddenContainersVisibility();
+}
+
+function isCountryHidden(countryName) {
+  if (!countryName) return false;
+  return hiddenCountries.has(countryName.toLowerCase());
+}
+
+function hideContainerForLocation(container, screenName, location) {
+  if (!container) return;
+  if (container.dataset.hiddenByCountry === 'true') return;
+  
+  container.dataset.hiddenByCountry = 'true';
+  container.dataset.flagAdded = 'hidden';
+  container.dataset.countryLocation = location;
+  
+  // Clean up any loaders inside the container before hiding
+  const shimmers = container.querySelectorAll('[data-twitter-flag-shimmer="true"]');
+  shimmers.forEach(shimmer => shimmer.remove());
+  
+  container.style.display = 'none';
+  console.log(`Hiding content for ${screenName} (${location})`);
+}
+
+function showAllHiddenContent() {
+  const hidden = document.querySelectorAll('[data-hidden-by-country="true"]');
+  hidden.forEach(container => {
+    container.style.display = '';
+    delete container.dataset.hiddenByCountry;
+    if (container.dataset.flagAdded === 'hidden') {
+      delete container.dataset.flagAdded;
+    }
+  });
+}
+
+function refreshHiddenContainersVisibility() {
+  if (!extensionEnabled) {
+    return;
+  }
+  
+  const containers = document.querySelectorAll('[data-country-location]');
+  let shouldReprocess = false;
+  
+  containers.forEach(container => {
+    const location = container.dataset.countryLocation;
+    if (isCountryHidden(location)) {
+      const username = extractUsername(container) || 'unknown user';
+      hideContainerForLocation(container, username, location);
+    } else if (container.dataset.hiddenByCountry === 'true') {
+      container.style.display = '';
+      delete container.dataset.hiddenByCountry;
+      if (container.dataset.flagAdded === 'hidden') {
+        delete container.dataset.flagAdded;
+        shouldReprocess = true;
+      }
+    }
+  });
+  
+  if (shouldReprocess) {
+    // Re-run processing to add flags for items that were previously hidden
+    setTimeout(processUsernames, 200);
   }
 }
 
@@ -501,6 +610,15 @@ async function addFlagToUsername(usernameElement, screenName) {
       shimmerSpan.remove();
     }
     
+    if (location) {
+      usernameElement.dataset.countryLocation = location;
+    }
+
+    if (location && isCountryHidden(location)) {
+      hideContainerForLocation(usernameElement, screenName, location);
+      return;
+    }
+    
     if (!location) {
       console.log(`No location found for ${screenName}, marking as failed`);
       usernameElement.dataset.flagAdded = 'failed';
@@ -858,6 +976,7 @@ async function init() {
   
   // Load enabled state first
   await loadEnabledState();
+  await loadHiddenCountries();
   
   // Load persistent cache
   await loadCache();
@@ -865,6 +984,7 @@ async function init() {
   // Only proceed if extension is enabled
   if (!extensionEnabled) {
     console.log('Extension is disabled');
+    showAllHiddenContent();
     return;
   }
   

@@ -10,6 +10,95 @@
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       font-size: 14px;
     }
+    .section {
+      background: #f7f9f9;
+      border-radius: 10px;
+      padding: 12px;
+      margin-top: 12px;
+      border: 1px solid #eff3f4;
+    }
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .section-title {
+      font-weight: 600;
+      color: #0f1419;
+    }
+    .section-description {
+      color: #536471;
+      font-size: 12px;
+      margin-top: 2px;
+    }
+    .pill-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 8px 0;
+      min-height: 24px;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #e8f5fd;
+      color: #0f1419;
+      border-radius: 999px;
+      padding: 6px 10px;
+      border: 1px solid #d0e7f9;
+      font-size: 12px;
+    }
+    .pill button {
+      border: none;
+      background: transparent;
+      color: #536471;
+      cursor: pointer;
+      padding: 0;
+      font-size: 12px;
+    }
+    .input-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .text-input {
+      flex: 1;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid #ccd6dd;
+      font-size: 14px;
+      outline: none;
+    }
+    .text-input:focus {
+      border-color: #1d9bf0;
+      box-shadow: 0 0 0 2px rgba(29, 155, 240, 0.15);
+    }
+    .action-button, .ghost-button {
+      border: none;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .action-button {
+      background: #1d9bf0;
+      color: #fff;
+    }
+    .action-button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .ghost-button {
+      background: transparent;
+      color: #536471;
+    }
+    .ghost-button:hover {
+      color: #0f1419;
+    }
     .header {
       display: flex;
       align-items: center;
@@ -74,6 +163,12 @@
       padding-top: 12px;
       border-top: 1px solid #eff3f4;
     }
+    .hint {
+      color: #667785;
+      font-size: 11px;
+      display: block;
+      margin-top: 6px;
+    }
   </style>
 </head>
 <body>
@@ -87,6 +182,85 @@
   </div>
   
   <div class="status" id="status">Loading...</div>
+  
+  <div class="section">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Hidden countries</div>
+        <div class="section-description">Hide posts from accounts in these locations.</div>
+      </div>
+      <button class="ghost-button" id="clearCountries">Clear</button>
+    </div>
+    <div class="pill-list" id="hiddenCountries"></div>
+    <div class="input-row">
+      <input type="text" id="countryInput" class="text-input" placeholder="Add country and press Enter" list="countrySuggestions" />
+      <button id="addCountryBtn" class="action-button">Add</button>
+    </div>
+    <small class="hint">Matches profile location text (case-insensitive).</small>
+    <datalist id="countrySuggestions">
+      <option value="Afghanistan"></option>
+      <option value="Albania"></option>
+      <option value="Algeria"></option>
+      <option value="Argentina"></option>
+      <option value="Australia"></option>
+      <option value="Austria"></option>
+      <option value="Bangladesh"></option>
+      <option value="Belgium"></option>
+      <option value="Brazil"></option>
+      <option value="Canada"></option>
+      <option value="Chile"></option>
+      <option value="China"></option>
+      <option value="Colombia"></option>
+      <option value="Czech Republic"></option>
+      <option value="Denmark"></option>
+      <option value="Egypt"></option>
+      <option value="Europe"></option>
+      <option value="Finland"></option>
+      <option value="France"></option>
+      <option value="Germany"></option>
+      <option value="Greece"></option>
+      <option value="Hong Kong"></option>
+      <option value="Hungary"></option>
+      <option value="India"></option>
+      <option value="Indonesia"></option>
+      <option value="Iran"></option>
+      <option value="Iraq"></option>
+      <option value="Ireland"></option>
+      <option value="Israel"></option>
+      <option value="Italy"></option>
+      <option value="Japan"></option>
+      <option value="Kenya"></option>
+      <option value="Malaysia"></option>
+      <option value="Mexico"></option>
+      <option value="Netherlands"></option>
+      <option value="New Zealand"></option>
+      <option value="Nigeria"></option>
+      <option value="Norway"></option>
+      <option value="Pakistan"></option>
+      <option value="Philippines"></option>
+      <option value="Poland"></option>
+      <option value="Portugal"></option>
+      <option value="Romania"></option>
+      <option value="Russia"></option>
+      <option value="Saudi Arabia"></option>
+      <option value="Singapore"></option>
+      <option value="South Africa"></option>
+      <option value="Korea"></option>
+      <option value="South Korea"></option>
+      <option value="Spain"></option>
+      <option value="Sweden"></option>
+      <option value="Switzerland"></option>
+      <option value="Taiwan"></option>
+      <option value="Thailand"></option>
+      <option value="Turkey"></option>
+      <option value="Ukraine"></option>
+      <option value="United Arab Emirates"></option>
+      <option value="United Kingdom"></option>
+      <option value="United States"></option>
+      <option value="Venezuela"></option>
+      <option value="Vietnam"></option>
+    </datalist>
+  </div>
   
   <div class="info">
     Shows country flags next to Twitter usernames based on account location.
