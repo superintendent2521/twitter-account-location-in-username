@@ -17,9 +17,10 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       try {
         const { path, method = 'GET', body } = message;
         const url = `${SERVER_BASE_URL}${path}`;
+        const headers = body ? { 'Content-Type': 'application/json' } : undefined;
         const resp = await fetchWithTimeout(url, {
           method,
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: body ? JSON.stringify(body) : undefined,
         });
         const status = resp.status;
