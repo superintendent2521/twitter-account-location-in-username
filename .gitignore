@@ -18,3 +18,7 @@ node_modules/
 
 __pycache__/
 output.zip
+compile.bash
+.amo-upload-uuid
+web-ext-artifacts/
+output.xpi

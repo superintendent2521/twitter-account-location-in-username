@@ -2,7 +2,7 @@
 let locationCache = new Map();
 const CACHE_KEY = 'twitter_location_cache';
 const CACHE_EXPIRY_DAYS = 30; // Cache for 30 days
-const SERVER_BASE_URL = 'http://localhost:8000';
+const SERVER_BASE_URL = 'https://twitter.superintendent.me';
 const SERVER_TIMEOUT_MS = 5000;
 const SERVER_LOOKUP_TTL_MS = 0; // Always re-check DB per user (no TTL)
 const SERVER_UPSERT_TTL_MS = 30 * 1000; // Throttle writes to DB per user

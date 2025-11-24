@@ -1,4 +1,4 @@
-const SERVER_BASE_URL = 'http://localhost:8000';
+const SERVER_BASE_URL = 'https://twitter.superintendent.me';
 const SERVER_TIMEOUT_MS = 5000;
 
 async function fetchWithTimeout(url, options = {}, timeoutMs = SERVER_TIMEOUT_MS) {
