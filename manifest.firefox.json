@@ -37,7 +37,10 @@
   "web_accessible_resources": [
     {
       "resources": ["pageScript.js"],
-      "matches": ["<all_urls>"]
+      "matches": [
+        "https://x.com/*",
+        "https://twitter.com/*"
+      ]
     }
   ]
 }
