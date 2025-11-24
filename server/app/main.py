@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from collections import defaultdict, deque
 from time import monotonic
 
-from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, HTTPException, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import func, select, text
 from sqlalchemy.dialects.postgresql import insert
@@ -114,6 +114,15 @@ async def startup_event():
 
 @app.get("/healthcheck", response_model=HealthResponse)
 async def healthcheck(session: AsyncSession = Depends(get_session)):
+    try:
+        await session.execute(text("SELECT 1"))
+    except SQLAlchemyError as exc:
+        raise HTTPException(status_code=503, detail="database unavailable") from exc
+
+    return HealthResponse(status="ok", database="available")
+
+@app.head("/healthcheck", response_model=HealthResponse)
+async def headcheck(session: AsyncSession = Depends(get_session)):
     try:
         await session.execute(text("SELECT 1"))
     except SQLAlchemyError as exc:
