@@ -5,7 +5,7 @@ const CACHE_EXPIRY_DAYS = 30; // Cache for 30 days
 const SERVER_BASE_URL = 'https://twitter.superintendent.me'; // open source server, just has more users so it would be more accurate since more people add users into it.
 const SERVER_TIMEOUT_MS = 5000;
 const SERVER_LOOKUP_TTL_MS = 0; 
-const SERVER_UPSERT_TTL_MS = 30 * 1000; // Throttle writes to DB per user
+const SERVER_UPSERT_TTL_MS = 3 * 60 * 1000; // Throttle writes to DB per user
 
 // Hidden countries preferences
 const HIDDEN_COUNTRIES_KEY = 'hidden_countries';
