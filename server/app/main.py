@@ -26,6 +26,22 @@ app.add_middleware(
 )
 
 
+@app.get("/")
+async def index():
+    return {
+        "service": "username-location-cache",
+        "endpoints": {
+          "healthcheck": {"method": "GET", "path": "/healthcheck"},
+          "check": {"method": "GET", "path": "/check?a=<username>"},
+          "add": {"method": "POST", "path": "/add", "body": {"username": "<username>", "location": "<country>"}, "status": 201},
+        },
+        "examples": {
+          "healthcheck": "curl https://twitter.superintendent.me/healthcheck",
+          "check": "curl 'https://twitter.superintendent.me/check?a=jack'"
+        },
+    }
+
+
 @app.on_event("startup")
 async def startup_event():
     async with engine.begin() as conn:
