@@ -18,8 +18,8 @@ class Settings(BaseModel):
     @classmethod
     def load(cls) -> "Settings":
         return cls(
-            database_url=os.getenv("DATABASE_URL", cls.model_fields["database_url"].default),
-            cache_ttl_days=int(os.getenv("CACHE_TTL_DAYS", cls.model_fields["cache_ttl_days"].default)),
+            database_url=os.getenv("DATABASE_URL", DEFAULT_DB_URL),
+            cache_ttl_days=int(os.getenv("CACHE_TTL_DAYS", Settings.cache_ttl_days)),
         )
 
 
