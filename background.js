@@ -26,7 +26,8 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         let data = null;
         try {
           data = await resp.json();
-        } catch (_err) {
+        } catch (err) {
+          console.error('Error parsing server response JSON:', err);
           data = null;
         }
         sendResponse({ ok: resp.ok, status, data });
