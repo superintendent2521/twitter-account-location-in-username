@@ -38,10 +38,12 @@ async def index():
             "healthcheck": {"method": "GET", "path": "/healthcheck"},
             "check": {"method": "GET", "path": "/check?a=<username>"},
             "add": {"method": "POST", "path": "/add", "body": {"username": "<username>", "location": "<country>"}, "status": 201},
+            "metrics": {"method": "GET", "path": "/metrics"},
         },
         "examples": {
             "healthcheck": "curl https://twitter.superintendent.me/healthcheck",
             "check": "curl 'https://twitter.superintendent.me/check?a=jack'",
+            "metrics": "curl https://twitter.superintendent.me/metrics",
         },
     }
 
