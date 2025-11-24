@@ -22,3 +22,4 @@ compile.bash
 .amo-upload-uuid
 web-ext-artifacts/
 output.xpi
+dist/
