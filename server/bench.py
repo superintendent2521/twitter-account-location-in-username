@@ -116,7 +116,7 @@ def main():
     print("Starting benchmark...")
     timeout = httpx.Timeout(args.timeout)
     limits = httpx.Limits(max_connections=args.concurrency, max_keepalive_connections=args.concurrency)
-    transport = httpx.AsyncHTTPTransport(retries=1)
+    transport = httpx.AsyncHTTPTransport(retries=0)
 
     async def runner():
         async with httpx.AsyncClient(timeout=timeout, limits=limits, transport=transport, http2=False) as client:
