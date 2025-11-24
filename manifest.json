@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Twitter Account Location Flag",
-  "version": "1.2",
+  "version": "1.3",
   "description": "Shows country flag emoji next to Twitter usernames based on account location",
   "permissions": [
     "storage"
