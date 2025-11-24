@@ -68,6 +68,7 @@ async def _refresh_location(username: str, normalized: str):
 
     canonical_location = normalize_country(new_location)
     if canonical_location is None:
+        logger.warning("background refresh for %s failed: could not normalize location '%s'", normalized, new_location)
         return
 
     async with SessionLocal() as session:
