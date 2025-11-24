@@ -2,9 +2,12 @@ import asyncio
 import logging
 from datetime import datetime, timezone
 
+from collections import defaultdict, deque
+from time import monotonic
+
 from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import select, text
+from sqlalchemy import func, select, text
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,7 +22,7 @@ from .schemas import HealthResponse, LocationCreate, LocationResponse
 logger = logging.getLogger(__name__)
 
 
-app = FastAPI(title="Username Location Cache", version="0.1.0")
+app = FastAPI(title="Username Location Cache", version="0.1.0", )
 
 app.add_middleware(
     CORSMiddleware,
@@ -75,6 +78,23 @@ async def _refresh_location(username: str, normalized: str):
         stmt = _upsert_location_stmt(normalized, canonical_location, now)
         await session.execute(stmt)
         await session.commit()
+
+
+WINDOW_SECONDS = 60
+WINDOW_LIMIT = 5
+_request_log = defaultdict(deque)
+_rate_lock = asyncio.Lock()
+
+
+async def rate_limit(key: str = "metrics"):
+    now = monotonic()
+    async with _rate_lock:
+        window = _request_log[key]
+        while window and window[0] <= now - WINDOW_SECONDS:
+            window.popleft()
+        if len(window) >= WINDOW_LIMIT:
+            raise HTTPException(status_code=429, detail="too many requests")
+        window.append(now)
 
 
 @app.on_event("startup")
@@ -187,3 +207,9 @@ async def add_location(
         last_checked=now,
         expires_at=now + settings.cache_ttl,
     )
+
+@app.get("/metrics", dependencies=[Depends(rate_limit)])
+async def  metrics(session: AsyncSession = Depends(get_session)):
+    result = await session.execute(select(func.count()).select_from(AccountLocation))
+    count = result.scalar_one()
+    return {"cached_users": count}
