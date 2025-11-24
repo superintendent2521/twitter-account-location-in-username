@@ -48,7 +48,7 @@ async def _issue_request(client: httpx.AsyncClient, url: str, username: str) -> 
     try:
         response = await client.get(url, params={"a": username})
         return (time.perf_counter() - start) * 1000, response.status_code
-    except Exception:
+    except httpx.HTTPError:
         return (time.perf_counter() - start) * 1000, None
 
 
