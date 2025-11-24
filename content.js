@@ -4,7 +4,7 @@ const CACHE_KEY = 'twitter_location_cache';
 const CACHE_EXPIRY_DAYS = 30; // Cache for 30 days
 const SERVER_BASE_URL = 'https://twitter.superintendent.me'; // open source server, just has more users so it would be more accurate since more people add users into it.
 const SERVER_TIMEOUT_MS = 5000;
-const SERVER_LOOKUP_TTL_MS = 0; 
+const SERVER_LOOKUP_TTL_MS = 15 * 60 * 1000; // 15 minutes
 const SERVER_UPSERT_TTL_MS = 3 * 60 * 1000; // Throttle writes to DB per user
 
 // Hidden countries preferences
@@ -21,9 +21,6 @@ let activeRequests = 0;
 let rateLimitResetTime = 0; // Unix timestamp when rate limit resets
 const serverLookupCache = new Map(); // username -> { checkedAt, location, promise }
 const serverUpsertTracker = new Map(); // username -> { timestamp, promise }
-
-// Observer for dynamically loaded content
-let observer = null;
 
 // Extension enabled state
 let extensionEnabled = true;
@@ -398,6 +395,16 @@ function injectPageScript() {
     }
   });
 }
+
+// Elements we care about when scanning the page
+const CONTAINER_SELECTOR = [
+  'article[data-testid="tweet"]',
+  'article[role="article"]',
+  '[data-testid="cellInnerDiv"]',
+  '[data-testid="UserCell"]',
+  '[data-testid="User-Names"]',
+  '[data-testid="User-Name"]',
+].join(', ');
 
 // Process request queue with rate limiting
 async function processRequestQueue() {
@@ -1019,30 +1026,17 @@ function removeAllFlags() {
   console.log('Removed all flags');
 }
 
-// Function to process all username elements on the page
-async function processUsernames() {
-  // Check if extension is enabled
-  if (!extensionEnabled) {
+// Process a set of username containers
+async function processContainers(containers) {
+  if (!extensionEnabled || !containers?.length) {
     return;
   }
-  
-  // Find all tweet/article containers and user cells
-  const containers = document.querySelectorAll([
-    'article[data-testid="tweet"]',
-    'article[role="article"]',
-    '[data-testid="cellInnerDiv"]',
-    '[data-testid="UserCell"]',
-    '[data-testid="User-Names"]',
-    '[data-testid="User-Name"]',
-  ].join(', '));
-  
-  console.log(`Processing ${containers.length} containers for usernames`);
-  
+
   let foundCount = 0;
   let processedCount = 0;
   let skippedCount = 0;
   
-  for (const container of containers) {
+  for (const container of Array.from(containers)) {
     const screenName = extractUsername(container);
     if (screenName) {
       foundCount++;
@@ -1073,29 +1067,58 @@ async function processUsernames() {
   }
 }
 
+// Function to process all username elements on the page
+function processUsernames() {
+  const containers = document.querySelectorAll(CONTAINER_SELECTOR);
+  console.log(`Processing ${containers.length} containers for usernames`);
+  processContainers(containers);
+}
+
 // Initialize observer for dynamically loaded content
 function initObserver() {
-  if (observer) {
-    observer.disconnect();
+  // Observer for dynamically loaded content
+  let observer = null;
+  const pendingRoots = new Set();
+  let processTimer = null;
+
+  function scheduleProcess() {
+    if (processTimer) return;
+    processTimer = setTimeout(() => {
+      processTimer = null;
+      if (!extensionEnabled) {
+        pendingRoots.clear();
+        return;
+      }
+
+      const roots = Array.from(pendingRoots);
+      pendingRoots.clear();
+
+      const containers = [];
+      for (const node of roots) {
+        if (!(node instanceof Element)) continue;
+        if (node.matches(CONTAINER_SELECTOR)) {
+          containers.push(node);
+        }
+        containers.push(...node.querySelectorAll(CONTAINER_SELECTOR));
+      }
+
+      if (containers.length) {
+        processContainers(containers);
+      }
+    }, 300);
   }
 
   observer = new MutationObserver((mutations) => {
-    // Don't process if extension is disabled
     if (!extensionEnabled) {
       return;
     }
-    
-    let shouldProcess = false;
+
     for (const mutation of mutations) {
-      if (mutation.addedNodes.length > 0) {
-        shouldProcess = true;
-        break;
-      }
+      mutation.addedNodes.forEach((node) => pendingRoots.add(node));
     }
-    
-    if (shouldProcess) {
-      // Debounce processing
-      setTimeout(processUsernames, 500);
+
+    if (pendingRoots.size > 0) {
+      scheduleProcess();
     }
   });
 
