@@ -26,7 +26,14 @@ app = FastAPI(title="Username Location Cache", version="0.1.0", )
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://twitter.superintendent.me"],
+    allow_origins=[
+        "https://twitter.superintendent.me",
+        "https://x.com",
+        "https://twitter.com",
+    ],
+    allow_origin_regex=r"chrome-extension://.*",
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
