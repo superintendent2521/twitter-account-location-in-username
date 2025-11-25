@@ -11,12 +11,12 @@
     const headerObj = {};
     if (headers instanceof Headers) {
       headers.forEach((value, key) => {
-        headerObj[key] = value;
+        headerObj[key.toLowerCase()] = value;
       });
     } else if (headers instanceof Object) {
       // Copy all headers
       for (const [key, value] of Object.entries(headers)) {
-        headerObj[key] = value;
+        headerObj[String(key).toLowerCase()] = value;
       }
     }
     
@@ -25,22 +25,41 @@
     headersReady = true;
     console.log('Captured Twitter API headers:', Object.keys(headerObj));
   }
+
+  function getCookie(name) {
+    const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+    return match ? decodeURIComponent(match[1]) : null;
+  }
+
+  function getDefaultHeaders() {
+    const ct0 = getCookie('ct0');
+    const guestToken = getCookie('gt');
+    return {
+      'accept': 'application/json',
+      'content-type': 'application/json',
+      'authorization': 'Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAgNsv4q2y1wAAAAAAOVkkpLomqKgkl0vvVh2wVSaTwA',
+      ...(ct0 ? { 'x-csrf-token': ct0 } : {}),
+      ...(guestToken ? { 'x-guest-token': guestToken } : {}),
+      'x-twitter-active-user': 'yes'
+    };
+  }
   
   // Intercept fetch to capture Twitter's headers
   const originalFetch = window.fetch;
   window.fetch = function(...args) {
-    const url = args[0];
-    const options = args[1] || {};
+    const [input, init = {}] = args;
+    const url = typeof input === 'string' ? input : (input && input.url);
     
     // If it's a Twitter GraphQL API call, capture ALL headers
-    if (typeof url === 'string' && url.includes('x.com/i/api/graphql')) {
-      if (options.headers) {
-        captureHeaders(options.headers);
+    if (typeof url === 'string' && url.includes('/i/api/graphql')) {
+      const headersToCapture = init.headers || (input instanceof Request ? input.headers : undefined);
+      if (headersToCapture) {
+        captureHeaders(headersToCapture);
         console.log('Captured Twitter headers:', Object.keys(twitterHeaders || {}));
       }
     }
     
-    return originalFetch.apply(this, args);
+    return originalFetch.apply(this, [input, init]);
   };
   
   // Also intercept XMLHttpRequest
@@ -75,10 +94,7 @@
   setTimeout(() => {
     if (!headersReady) {
       console.log('No Twitter headers captured yet, using defaults');
-      twitterHeaders = {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-      };
+      twitterHeaders = getDefaultHeaders();
       headersReady = true;
     }
   }, 3000);
@@ -103,10 +119,7 @@
         const url = `https://x.com/i/api/graphql/XRqGa7EeokUU5kppkh13EA/AboutAccountQuery?variables=${encodeURIComponent(variables)}`;
         
         // Use captured headers or minimal defaults
-        const headers = twitterHeaders || {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        };
+        const headers = twitterHeaders || getDefaultHeaders();
         
         // Ensure credentials are included
         const response = await fetch(url, {

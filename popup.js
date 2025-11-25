@@ -28,15 +28,20 @@ function saveHiddenCountries(countries) {
 
 function notifyContentScripts() {
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-    if (!tabs[0]) return;
-    try {
-      chrome.tabs.sendMessage(tabs[0].id, {
+    const tabId = tabs?.[0]?.id;
+    if (!tabId) return;
+    chrome.tabs.sendMessage(
+      tabId,
+      {
         type: 'updateHiddenCountries',
         countries: hiddenCountries
-      }, () => {});
-    } catch (e) {
-      // Content script may not be loaded yet; ignore
-    }
+      },
+      () => {
+        if (chrome.runtime.lastError) {
+          console.debug('No receiver for hidden countries update:', chrome.runtime.lastError.message);
+        }
+      }
+    );
   });
 }
 
@@ -133,14 +138,20 @@ toggleSwitch.addEventListener('click', () => {
       
       // Notify content script to update
       chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        if (tabs[0]) {
-          chrome.tabs.sendMessage(tabs[0].id, {
+        const tabId = tabs?.[0]?.id;
+        if (!tabId) return;
+        chrome.tabs.sendMessage(
+          tabId,
+          {
             type: 'extensionToggle',
             enabled: newState
-          }).catch(() => {
-            // Tab might not have content script loaded yet, that's okay
-          });
-        }
+          },
+          () => {
+            if (chrome.runtime.lastError) {
+              console.debug('No receiver for toggle message:', chrome.runtime.lastError.message);
+            }
+          }
+        );
       });
     });
   });

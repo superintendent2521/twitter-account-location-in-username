@@ -876,6 +876,7 @@ async function addFlagToUsername(usernameElement, screenName) {
   flagSpan.style.marginLeft = '4px';
   flagSpan.style.marginRight = '4px';
   flagSpan.style.display = 'inline';
+  flagSpan.style.fontFamily = '"Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji","Twemoji Mozilla",system-ui,sans-serif';
   flagSpan.style.color = 'inherit';
   flagSpan.style.verticalAlign = 'middle';
   

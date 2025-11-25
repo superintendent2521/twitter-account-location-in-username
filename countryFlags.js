@@ -63,12 +63,40 @@ const COUNTRY_FLAGS = {
   "Vietnam": "🇻🇳"
 };
 
+// Normalize common abbreviations/aliases to canonical country names
+const COUNTRY_ALIASES = {
+  "US": "United States",
+  "USA": "United States",
+  "UNITEDSTATES": "United States",
+  "UNITEDSTATESOFAMERICA": "United States",
+  "CA": "Canada",
+  "CAN": "Canada",
+  "UK": "United Kingdom",
+  "GB": "United Kingdom",
+  "GBR": "United Kingdom",
+  "UAE": "United Arab Emirates",
+  "SA": "Saudi Arabia",
+  "KSA": "Saudi Arabia",
+  "AU": "Australia",
+  "AUS": "Australia",
+  "NZ": "New Zealand",
+  "EU": "Europe",
+  "EUROPEANUNION": "Europe"
+};
+
 function getCountryFlag(countryName) {
   if (!countryName) return null;
   
   // Try exact match first
   if (COUNTRY_FLAGS[countryName]) {
     return COUNTRY_FLAGS[countryName];
+  }
+  
+  // Try alias map (normalize punctuation/spacing)
+  const aliasKey = countryName.replace(/[\s\.-]/g, '').toUpperCase();
+  if (COUNTRY_ALIASES[aliasKey]) {
+    const canonical = COUNTRY_ALIASES[aliasKey];
+    return COUNTRY_FLAGS[canonical] || null;
   }
   
   // Try case-insensitive match
