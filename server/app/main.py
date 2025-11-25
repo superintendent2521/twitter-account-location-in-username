@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from collections import defaultdict, deque
 from time import monotonic
 
-from fastapi import Depends, FastAPI, HTTPException, Query, Response
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import func, select, text
 from sqlalchemy.dialects.postgresql import insert
@@ -46,11 +46,13 @@ async def index():
             "check": {"method": "GET", "path": "/check?a=<username>"},
             "add": {"method": "POST", "path": "/add", "body": {"username": "<username>", "location": "<country>"}, "status": 201},
             "metrics": {"method": "GET", "path": "/metrics"},
+            "metrics_json": {"method": "GET", "path": "/metrics.json"},
         },
         "examples": {
             "healthcheck": "curl https://twitter.superintendent.me/healthcheck",
             "check": "curl 'https://twitter.superintendent.me/check?a=jack'",
             "metrics": "curl https://twitter.superintendent.me/metrics",
+            "metrics_json": "curl https://twitter.superintendent.me/metrics.json",
         },
     }
 
@@ -94,6 +96,10 @@ WINDOW_LIMIT = 5
 _request_log = defaultdict(deque)
 _rate_lock = asyncio.Lock()
 
+REQUEST_WINDOW_SECONDS = 600  # 10 minutes
+_request_timestamps = deque()
+_request_lock = asyncio.Lock()
+
 
 async def rate_limit(key: str = "metrics"):
     now = monotonic()
@@ -104,6 +110,30 @@ async def rate_limit(key: str = "metrics"):
         if len(window) >= WINDOW_LIMIT:
             raise HTTPException(status_code=429, detail="too many requests")
         window.append(now)
+
+
+async def _record_request():
+    now = monotonic()
+    cutoff = now - REQUEST_WINDOW_SECONDS
+    async with _request_lock:
+        while _request_timestamps and _request_timestamps[0] <= cutoff:
+            _request_timestamps.popleft()
+        _request_timestamps.append(now)
+
+
+async def _count_recent_requests() -> int:
+    now = monotonic()
+    cutoff = now - REQUEST_WINDOW_SECONDS
+    async with _request_lock:
+        while _request_timestamps and _request_timestamps[0] <= cutoff:
+            _request_timestamps.popleft()
+        return len(_request_timestamps)
+
+
+@app.middleware("http")
+async def record_requests_middleware(request: Request, call_next):
+    await _record_request()
+    return await call_next(request)
 
 
 @app.on_event("startup")
@@ -227,7 +257,27 @@ async def add_location(
     )
 
 @app.get("/metrics", dependencies=[Depends(rate_limit)])
-async def  metrics(session: AsyncSession = Depends(get_session)):
-    result = await session.execute(select(func.count()).select_from(AccountLocation))
-    count = result.scalar_one()
-    return {"cached_users": count}
+async def metrics(session: AsyncSession = Depends(get_session)):
+    db_count_result = await session.execute(select(func.count()).select_from(AccountLocation))
+    cached_users = db_count_result.scalar_one()
+    recent_requests = await _count_recent_requests()
+
+    lines = [
+        "# HELP username_location_cached_users_total Total cached users in the database",
+        "# TYPE username_location_cached_users_total gauge",
+        f"username_location_cached_users_total {cached_users}",
+        "# HELP username_location_requests_last_10_minutes Total HTTP requests received in the last 10 minutes",
+        "# TYPE username_location_requests_last_10_minutes gauge",
+        f"username_location_requests_last_10_minutes {recent_requests}",
+    ]
+
+    body = "\n".join(lines) + "\n"
+    return Response(content=body, media_type="text/plain; version=0.0.4")
+
+
+@app.get("/metrics.json", dependencies=[Depends(rate_limit)])
+async def metrics_json(session: AsyncSession = Depends(get_session)):
+    db_count_result = await session.execute(select(func.count()).select_from(AccountLocation))
+    cached_users = db_count_result.scalar_one()
+    recent_requests = await _count_recent_requests()
+    return {"cached_users": cached_users, "requests_last_10_minutes": recent_requests}
