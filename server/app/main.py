@@ -19,6 +19,8 @@ from .location_provider import fetch_location_for_username
 from .models import AccountLocation, Base
 from .schemas import HealthResponse, LocationCreate, LocationResponse
 
+# Configure logging once for the app; uvicorn only sets up its own loggers by default.
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
