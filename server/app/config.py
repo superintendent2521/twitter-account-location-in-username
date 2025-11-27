@@ -4,7 +4,9 @@ from datetime import timedelta
 from pydantic import BaseModel
 
 
-DEFAULT_DB_URL = "postgresql+asyncpg://postgres:postgres@localhost:5432/twitter_location"
+DEFAULT_DB_URL = (
+    "postgresql+asyncpg://postgres:postgres@localhost:5432/twitter_location"
+)
 
 
 class Settings(BaseModel):

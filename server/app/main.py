@@ -24,7 +24,10 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-app = FastAPI(title="Username Location Cache", version="0.1.0", )
+app = FastAPI(
+    title="Username Location Cache",
+    version="0.1.0",
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -46,7 +49,12 @@ async def index():
         "endpoints": {
             "healthcheck": {"method": "GET", "path": "/healthcheck"},
             "check": {"method": "GET", "path": "/check?a=<username>"},
-            "add": {"method": "POST", "path": "/add", "body": {"username": "<username>", "location": "<country>"}, "status": 201},
+            "add": {
+                "method": "POST",
+                "path": "/add",
+                "body": {"username": "<username>", "location": "<country>"},
+                "status": 201,
+            },
             "metrics": {"method": "GET", "path": "/metrics"},
             "metrics_json": {"method": "GET", "path": "/metrics.json"},
         },
@@ -59,7 +67,9 @@ async def index():
     }
 
 
-def _upsert_location_stmt(normalized_username: str, location: str, fetched_at: datetime):
+def _upsert_location_stmt(
+    normalized_username: str, location: str, fetched_at: datetime
+):
     stmt = insert(AccountLocation).values(
         username=normalized_username,
         location=location,
@@ -67,7 +77,10 @@ def _upsert_location_stmt(normalized_username: str, location: str, fetched_at: d
     )
     return stmt.on_conflict_do_update(
         index_elements=[AccountLocation.username],
-        set_={"location": stmt.excluded.location, "fetched_at": stmt.excluded.fetched_at},
+        set_={
+            "location": stmt.excluded.location,
+            "fetched_at": stmt.excluded.fetched_at,
+        },
     )
 
 
@@ -84,7 +97,11 @@ async def _refresh_location(username: str, normalized: str):
 
     canonical_location = normalize_country(new_location)
     if canonical_location is None:
-        logger.warning("background refresh for %s failed: could not normalize location '%s'", normalized, new_location)
+        logger.warning(
+            "background refresh for %s failed: could not normalize location '%s'",
+            normalized,
+            new_location,
+        )
         return
 
     async with SessionLocal() as session:
@@ -144,22 +161,24 @@ async def startup_event():
         await conn.run_sync(Base.metadata.create_all)
 
 
-@app.get("/healthcheck", response_model=HealthResponse)
-async def healthcheck(session: AsyncSession = Depends(get_session)):
+async def db_healthcheck(session: AsyncSession):
     try:
         await session.execute(text("SELECT 1"))
     except SQLAlchemyError as exc:
         raise HTTPException(status_code=503, detail="database unavailable") from exc
 
+    return True
+
+
+@app.get("/healthcheck", response_model=HealthResponse)
+async def healthcheck(session: AsyncSession = Depends(get_session)):
+    await db_healthcheck(session)
     return HealthResponse(status="ok", database="available")
+
 
 @app.head("/healthcheck", response_model=HealthResponse)
 async def headcheck(session: AsyncSession = Depends(get_session)):
-    try:
-        await session.execute(text("SELECT 1"))
-    except SQLAlchemyError as exc:
-        raise HTTPException(status_code=503, detail="database unavailable") from exc
-
+    await db_healthcheck(session)
     return HealthResponse(status="ok", database="available")
 
 
@@ -176,7 +195,9 @@ async def check_username(
     now = datetime.now(timezone.utc)
 
     result = await session.execute(
-        select(AccountLocation.location, AccountLocation.fetched_at).where(AccountLocation.username == normalized)
+        select(AccountLocation.location, AccountLocation.fetched_at).where(
+            AccountLocation.username == normalized
+        )
     )
     record = result.first()
 
@@ -215,7 +236,9 @@ async def check_username(
 
     canonical_location = normalize_country(new_location)
     if canonical_location is None:
-        raise HTTPException(status_code=502, detail="location not in allowed country list")
+        raise HTTPException(
+            status_code=502, detail="location not in allowed country list"
+        )
 
     stmt = _upsert_location_stmt(normalized, canonical_location, now)
     await session.execute(stmt)
@@ -243,7 +266,9 @@ async def add_location(
 
     canonical_location = normalize_country(payload.location)
     if canonical_location is None:
-        raise HTTPException(status_code=422, detail="location must be one of the allowed country names")
+        raise HTTPException(
+            status_code=422, detail="location must be one of the allowed country names"
+        )
 
     stmt = _upsert_location_stmt(normalized, canonical_location, now)
     logger.info(f"adding for {normalized},{canonical_location}")
@@ -258,9 +283,12 @@ async def add_location(
         expires_at=now + settings.cache_ttl,
     )
 
+
 @app.get("/metrics", dependencies=[Depends(rate_limit)])
 async def metrics(session: AsyncSession = Depends(get_session)):
-    db_count_result = await session.execute(select(func.count()).select_from(AccountLocation))
+    db_count_result = await session.execute(
+        select(func.count()).select_from(AccountLocation)
+    )
     cached_users = db_count_result.scalar_one()
     recent_requests = await _count_recent_requests()
 
@@ -279,7 +307,9 @@ async def metrics(session: AsyncSession = Depends(get_session)):
 
 @app.get("/metrics.json", dependencies=[Depends(rate_limit)])
 async def metrics_json(session: AsyncSession = Depends(get_session)):
-    db_count_result = await session.execute(select(func.count()).select_from(AccountLocation))
+    db_count_result = await session.execute(
+        select(func.count()).select_from(AccountLocation)
+    )
     cached_users = db_count_result.scalar_one()
     recent_requests = await _count_recent_requests()
     return {"cached_users": cached_users, "requests_last_10_minutes": recent_requests}
